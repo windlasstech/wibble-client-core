@@ -4,7 +4,7 @@ members = [
   "crates/wibble-openmls-engine",
   "crates/wibble-client-core",
 ]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 edition = "2024"

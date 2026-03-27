@@ -1,0 +1,96 @@
+# Dependabot configuration for wibble-client-core
+# Documentation: https://docs.github.com/en/code-security/dependabot
+#
+# This configuration enables automated version updates for:
+# - Cargo/Rust dependencies (workspace-wide)
+# - GitHub Actions workflows
+#
+# Security considerations for MLS/OpenMLS project:
+# - Daily checks to catch security patches quickly
+# - Conservative versioning strategy (increase-if-necessary)
+# - Security-focused labels and commit message prefixes
+
+version: 2
+
+updates:
+  # ---------------------------------------------------------------------------
+  # Cargo/Rust workspace dependencies
+  # ---------------------------------------------------------------------------
+  # Pointing to workspace root ("/") automatically discovers all workspace
+  # members defined in the root Cargo.toml:
+  #   - crates/wibble-core-domain
+  #   - crates/wibble-openmls-engine
+  #   - crates/wibble-client-core
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "cargo"
+    directory: "/"
+    
+    # Schedule: Daily for security-sensitive project
+    # RFC 9420 MLS protocol requires prompt security patch application
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    
+    # Labels for organization and filtering
+    labels:
+      - "dependencies"
+      - "security"
+      - "cargo"
+    
+    # Commit message conventions following project standards
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    
+    # Limit concurrent PRs to avoid overwhelming review queue
+    open-pull-requests-limit: 5
+    
+    # Conservative versioning for security-critical codebase
+    # Only increase versions when necessary (respects Cargo.lock)
+    versioning-strategy: "increase-if-necessary"
+    
+    # Group related dependencies to reduce PR noise
+    groups:
+      # Group patch-level updates together
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+      
+      # Group dev dependencies separately
+      dev-dependencies:
+        dependency-type: "development"
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions dependencies
+  # ---------------------------------------------------------------------------
+  # Keeps workflow actions up-to-date (important for supply chain security)
+  # per SECURITY.md requirements for SHA-pinned actions
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    
+    labels:
+      - "dependencies"
+      - "github-actions"
+    
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    
+    open-pull-requests-limit: 3
+    
+    # Group all GitHub Actions updates together
+    groups:
+      actions:
+        patterns:
+          - "*"

@@ -1,8 +1,11 @@
 # Wibble Client Core
 
 ![GitHub License](https://img.shields.io/github/license/windlasstech/wibble-client-core)
+[![SemVer Versioning](https://img.shields.io/badge/version_scheme-SemVer-0097a7)](https://semver.org/)
 [![GitHub issues](https://img.shields.io/badge/issue_tracking-GitHub-blue.svg)](https://github.com/windlasstech/wibble-client-core/issues)
 [![core-ci](https://github.com/windlasstech/wibble-client-core/actions/workflows/core-ci.yml/badge.svg)](https://github.com/windlasstech/wibble-client-core/actions/workflows/core-ci.yml)
+[![CodeQL](https://github.com/windlasstech/wibble-client-core/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/windlasstech/wibble-client-core/actions/workflows/github-code-scanning/codeql)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/windlasstech/wibble-client-core/badge)](https://scorecard.dev/viewer/?uri=github.com/windlasstech/wibble-client-core)
 
 `wibble-client-core` is the public client-side security and protocol core for the Wibble ecosystem. It covers MLS/OpenMLS-based security primitives, message canonicalization, and cryptographic hashing utilities.
 Current bootstrap uses an OpenMLS single-engine architecture with placeholder contracts for phase-0.

@@ -81,6 +81,27 @@ Phase-0 bootstrap scaffold implementing RFC 9420 MLS protocol concepts. Three-la
 ### Pull Requests
 - Use [organization PR template](https://github.com/windlasstech/.github/blob/main/.github/PULL_REQUEST_TEMPLATE.md) for all PRs
 
+### Supply Chain Integrity
+Per [SECURITY.md](https://github.com/windlasstech/.github/blob/main/SECURITY.md):
+
+**Workflow Hardening:**
+- **SHA-pinned actions** — Every `uses:` reference MUST be pinned to the full 40-character commit SHA (not mutable tags like `@v4`). Add `# vX.Y.Z` comment for readability. Dependabot updates SHAs via weekly PRs.
+- **Harden-runner** — Every job MUST start with `step-security/harden-runner` in audit mode (`egress-policy: audit`) to log outbound network calls.
+- **Least privilege** — Prefer job-level `permissions` over top-level `permissions`.
+
+**Release Integrity:**
+- **GPG-signed tags** — All release tags are GPG-signed annotated tags
+- **GPG-signed commits** — All commits on `main` MUST be GPG-signed (enforced by repository rulesets)
+- **Linear history** — Squash-merge-only policy; force-push to `main` is blocked
+- **CI gate** — All required status checks must pass before any merge to `main`
+
+### Branch Management
+- **Trunk-based development** — Single mainline (`main`) with short-lived feature branches
+- **Branch naming** — Use `feat/**` prefix for feature branches (protected CI triggers)
+- **Main protection** — Force-push blocked; all changes via PR with required reviews
+- **Linear history** — Squash-merge produces clean, bisectable history
+- **Delete after merge** — Feature branches deleted after merge to keep repo clean
+
 ---
 
 ## ANTI-PATTERNS (THIS PROJECT)
