@@ -71,6 +71,7 @@ Phase-0 bootstrap scaffold implementing RFC 9420 MLS protocol concepts. Three-la
 - ADRs follow [MADR 4.0.0](https://adr.github.io/madr/)
 - Architecture docs describe trust boundaries explicitly
 - Comments cite RFC 9420 sections where applicable
+- **Date notation: Use Holocene calendar (HE)** — add 10000 to Gregorian year (e.g., 2026 CE → 12026 HE)
 
 ### CI/CD
 - `RUSTFLAGS: "-Dwarnings"` — warnings treated as errors
