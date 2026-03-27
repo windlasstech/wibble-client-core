@@ -1,0 +1,12 @@
+[package]
+name = "wibble-client-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+wibble-core-domain = { path = "../wibble-core-domain" }
+wibble-openmls-engine = { path = "../wibble-openmls-engine" }
