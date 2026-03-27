@@ -1,0 +1,21 @@
+protocol:
+  source_repo: https://github.com/windlasstech/protocol-spec
+  mls_rfc: RFC 9420
+  status: bootstrap
+  protocol_versions:
+    - mls10
+
+engine:
+  strategy: single
+  selected: openmls
+  openmls_version: planned
+  crypto_provider: planned
+  ciphersuites:
+    - MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519
+  storage_model: planned
+  alternatives_considered:
+    - mls-rs
+
+interop:
+  conformance_repo: https://github.com/windlasstech/conformance-tests
+  vectors_status: planned
