@@ -78,6 +78,9 @@ Phase-0 bootstrap scaffold implementing RFC 9420 MLS protocol concepts. Three-la
 - `cargo fmt`, `clippy`, `check`, `test` — all workspace
 - Runs on: push to `main`/`feat/**`, all PRs
 
+### Pull Requests
+- Use [organization PR template](https://github.com/windlasstech/.github/blob/main/.github/PULL_REQUEST_TEMPLATE.md) for all PRs
+
 ---
 
 ## ANTI-PATTERNS (THIS PROJECT)
