@@ -1,21 +1,22 @@
-# SLSA Level 3 Release Pipeline Architecture
+# SLSA Build L3 Release Pipeline Architecture
 
 **Date**: 12026-03-28 HE  
 **Status**: Implemented  
-**Reference**: ADR-0003
+**Reference**: ADR-0003  
+**SLSA Spec**: v1.2
 
 ## Overview
 
-This document describes the SLSA (Supply-chain Levels for Software Artifacts) Level 3 compliant release pipeline for `wibble-client-core`. The pipeline ensures that every release artifact has cryptographically verifiable provenance, documenting exactly how it was built and from what source.
+This document describes the SLSA (Supply-chain Levels for Software Artifacts) Build L3 compliant release pipeline for `wibble-client-core`. The pipeline ensures that every release artifact has cryptographically verifiable provenance, documenting exactly how it was built and from what source.
 
-### What is SLSA Level 3?
+### What is SLSA Build L3?
 
-SLSA Build Level 3 provides the following guarantees:
+SLSA Build L3 (Level 3) provides the following guarantees per [SLSA v1.2 spec](https://slsa.dev/spec/v1.2/build-track-basics):
 
-1. **Provenance Generation**: Build process is documented in a signed attestation
-2. **Signed Provenance**: Attestations are signed by a trusted build service
-3. **Build Isolation**: Builds cannot influence each other (reusable workflow boundary)
-4. **Hermetic Builds**: Reproducible builds with locked dependencies
+1. **Provenance is Unforgeable**: Build platform generates and signs provenance; signing keys are inaccessible to build steps
+2. **Isolated**: Builds run in ephemeral environments; overlapping builds cannot influence each other
+3. **Tamper Prevention**: Prevents tampering during the build by insider threats or compromised credentials
+4. **Strong Confidence**: Provides strong evidence that the package was built from the official source and build process
 
 ## Artifact Inventory
 
@@ -244,8 +245,9 @@ All attestations are stored in:
 
 ## References
 
-- [SLSA Specification](https://slsa.dev/spec/v1.0/levels)
+- [SLSA v1.2 Build Track Basics](https://slsa.dev/spec/v1.2/build-track-basics)
+- [SLSA v1.2 Build Requirements](https://slsa.dev/spec/v1.2/build-requirements)
 - [slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator)
 - [actions/attest](https://github.com/actions/attest)
 - [GitHub Artifact Attestations](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds)
-- [ADR-0003: SLSA Level 3 Release Pipeline](../decisions/ADR-0003-slsa-level-3-release-pipeline.md)
+- [ADR-0003: SLSA Build L3 Release Pipeline](../decisions/ADR-0003-slsa-level-3-release-pipeline.md)

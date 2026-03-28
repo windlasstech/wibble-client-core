@@ -20,7 +20,7 @@ Without these, we cannot provide verifiable guarantees about artifact integrity 
 
 ## Decision Drivers
 
-- Compliance with SLSA (Supply-chain Levels for Software Artifacts) v1.0 Build Level 3
+- Compliance with SLSA (Supply-chain Levels for Software Artifacts) v1.2 Build L3
 - Protection against supply chain attacks (tampering, unauthorized modifications)
 - Downstream consumer trust and verification capability
 - Alignment with OpenSSF best practices
@@ -45,9 +45,9 @@ Chosen option: **Option A** - Adopt SLSA Level 3 with full GitHub Actions integr
 
 ### Rationale
 
-- GitHub Actions provides native SLSA Level 3 builder capabilities
+- GitHub Actions provides native SLSA Build L3 builder capabilities
 - `actions/attest` integrates seamlessly with GitHub's attestation API
-- `slsa-github-generator` provides non-forgeable provenance meeting SLSA L3 requirements
+- `slsa-github-generator` provides unforgeable provenance meeting SLSA Build L3 requirements
 - Aligns with existing GitHub-centric workflow (Scorecard, CodeQL, etc.)
 
 ### Consequences
@@ -122,14 +122,15 @@ slsa-verifier verify-artifact wibble-client-core-0.1.0.crate \
 
 ## Compliance Notes
 
-### SLSA Build Level 3 Requirements
+### SLSA Build L3 Requirements (v1.2)
 
 | Requirement | Implementation |
 |-------------|----------------|
 | Provenance Generation | `slsa-github-generator` + `actions/attest` |
-| Signed Provenance | Sigstore signing via GitHub attestation API |
-| Isolation Strength | Reusable workflow with locked dependencies |
-| Build Service | GitHub Actions (SLSA L3 compliant) |
+| Provenance Authentic | Sigstore signing via GitHub attestation API |
+| Provenance Unforgeable | `slsa-github-generator` trusted control plane |
+| Isolation (Hosted) | GitHub Actions hosted build platform |
+| Isolation (Isolated) | Reusable workflow with ephemeral environments |
 
 ### Exceptions
 
@@ -139,7 +140,8 @@ slsa-verifier verify-artifact wibble-client-core-0.1.0.crate \
 
 ## References
 
-- SLSA Specification: https://slsa.dev/spec/v1.0/levels
+- SLSA v1.2 Specification: https://slsa.dev/spec/v1.2/build-track-basics
+- SLSA v1.2 Build Requirements: https://slsa.dev/spec/v1.2/build-requirements
 - slsa-github-generator: https://github.com/slsa-framework/slsa-github-generator
 - GitHub Artifact Attestations: https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds
 - Architecture Doc: `docs/architecture/slsa-level-3-release.md`
