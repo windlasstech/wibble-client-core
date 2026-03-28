@@ -8,5 +8,5 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-wibble-core-domain = { path = "../wibble-core-domain" }
-wibble-openmls-engine = { path = "../wibble-openmls-engine" }
+wibble-core-domain = { path = "../wibble-core-domain", version = "0.1.0" }
+wibble-openmls-engine = { path = "../wibble-openmls-engine", version = "0.1.0" }

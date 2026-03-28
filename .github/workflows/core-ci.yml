@@ -5,12 +5,17 @@ on:
     branches: ["main", "feat/**"]
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
   rust-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
@@ -19,6 +24,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Setup Rust toolchain
         run: |
@@ -29,10 +36,32 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Cargo clippy
-        run: cargo clippy --workspace --all-targets --all-features
+        run: cargo clippy --workspace --all-targets --all-features --locked
 
       - name: Cargo check
-        run: cargo check --workspace
+        run: cargo check --workspace --locked
 
       - name: Cargo test
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
+
+  # Smoke test: ensure workspace is packageable for release
+  package-smoke-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust toolchain
+        run: rustup show
+
+      - name: Cargo package (smoke test)
+        run: cargo package --workspace --locked --allow-dirty

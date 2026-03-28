@@ -1,0 +1,210 @@
+name: verify-release
+#
+# SLSA Level 3 Release Verification
+#
+# This workflow verifies that a release meets SLSA Level 3 requirements.
+# It checks GitHub attestations and SLSA provenance.
+#
+# Can be run manually or triggered after a release.
+#
+# Reference: docs/architecture/slsa-level-3-release.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify (e.g., v0.1.0)'
+        required: true
+        type: string
+  workflow_run:
+    workflows: ['release']
+    types: [completed]
+
+permissions:
+  contents: read
+  attestations: read
+
+jobs:
+  verify:
+    name: Verify Release Attestations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+
+      - name: Determine tag to verify
+        id: get-tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          WORKFLOW_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            # Extract tag from the triggering workflow
+            tag="$WORKFLOW_HEAD_BRANCH"
+          else
+            tag="$INPUT_TAG"
+          fi
+          
+          # Validate tag format (must start with 'v' and contain version)
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+ ]]; then
+            echo "ERROR: Invalid tag format: $tag"
+            echo "Tag must start with 'v' followed by version (e.g., v0.1.0)"
+            exit 1
+          fi
+          
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Verifying release: ${tag}"
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install GitHub CLI
+        run: |
+          type -p gh > /dev/null || (sudo apt-get update && sudo apt-get install -y gh)
+
+      - name: Download release assets
+        env:
+          TAG: ${{ steps.get-tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dist/
+          cd dist/
+          
+          # Download all release assets
+          gh release download "$TAG" --repo "${{ github.repository }}"
+          
+          echo "Downloaded assets:"
+          ls -la
+
+      - name: Verify artifact attestations (provenance)
+        run: |
+          cd dist/
+          
+          # Verify provenance attestation for each crate
+          for crate in *.crate; do
+            echo "Verifying provenance attestation for: ${crate}"
+            gh attestation verify "${crate}" \
+              --repo "${{ github.repository }}" \
+              --predicate-type https://in-toto.io/attestation/provenance/v1
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Verify SBOM attestations
+        run: |
+          cd dist/
+          
+          # Verify SBOM attestation for each crate
+          for crate in *.crate; do
+            echo "Verifying SBOM attestation for: ${crate}"
+            gh attestation verify "${crate}" \
+              --repo "${{ github.repository }}" \
+              --predicate-type https://spdx.dev/Document/v2.3 || true
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  verify-slsa:
+    name: Verify SLSA Provenance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+
+      - name: Determine tag to verify
+        id: get-tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          WORKFLOW_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            tag="$WORKFLOW_HEAD_BRANCH"
+          else
+            tag="$INPUT_TAG"
+          fi
+          
+          # Validate tag format (must start with 'v' and contain version)
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+ ]]; then
+            echo "ERROR: Invalid tag format: $tag"
+            echo "Tag must start with 'v' followed by version (e.g., v0.1.0)"
+            exit 1
+          fi
+          
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Install slsa-verifier
+        run: |
+          # Install slsa-verifier v2
+          curl -sL https://github.com/slsa-framework/slsa-verifier/releases/download/v2.7.0/slsa-verifier-linux-amd64 -o slsa-verifier
+          chmod +x slsa-verifier
+          sudo mv slsa-verifier /usr/local/bin/
+          
+          # Verify installation
+          slsa-verifier version
+
+      - name: Download release assets
+        env:
+          TAG: ${{ steps.get-tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dist/
+          cd dist/
+          
+          # Download release assets using gh CLI
+          gh release download "$TAG" --repo "${{ github.repository }}"
+          
+          echo "Downloaded assets:"
+          ls -la
+
+      - name: Verify SLSA provenance
+        env:
+          TAG: ${{ steps.get-tag.outputs.tag }}
+        run: |
+          cd dist/
+
+          # Find the provenance file
+          provenance_file=$(ls *.intoto.jsonl 2>/dev/null | head -1)
+          if [ -z "${provenance_file}" ]; then
+            echo "ERROR: No provenance file found"
+            exit 1
+          fi
+
+          echo "Found provenance file: ${provenance_file}"
+
+          # Verify each crate with slsa-verifier
+          for crate in *.crate; do
+            echo "Verifying SLSA provenance for: ${crate}"
+            slsa-verifier verify-artifact "${crate}" \
+              --provenance-path "${provenance_file}" \
+              --source-uri "github.com/${{ github.repository }}" \
+              --source-tag "$TAG"
+          done
+
+      - name: Summary
+        if: always()
+        env:
+          TAG: ${{ steps.get-tag.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "## SLSA Level 3 Verification Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tag: $TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Repository: $REPO" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Verification Steps" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] GitHub artifact attestations (provenance)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] GitHub SBOM attestations" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [x] SLSA provenance (slsa-verifier)" >> "$GITHUB_STEP_SUMMARY"

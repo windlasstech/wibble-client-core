@@ -8,4 +8,4 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-wibble-core-domain = { path = "../wibble-core-domain" }
+wibble-core-domain = { path = "../wibble-core-domain", version = "0.1.0" }
