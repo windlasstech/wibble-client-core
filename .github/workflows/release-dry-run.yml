@@ -1,0 +1,90 @@
+name: release-dry-run
+#
+# SLSA Level 3 Release Pipeline - Dry Run Test
+#
+# This workflow tests the release pipeline WITHOUT creating an actual release.
+# It builds artifacts and generates attestations for verification testing.
+#
+# Use this to verify the pipeline works before creating a real release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_attestations:
+        description: 'Upload attestations as workflow artifacts for inspection'
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-attest:
+    name: Build and Generate Attestations (Dry Run)
+    uses: ./.github/workflows/reusable-rust-release-build.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+  inspect:
+    name: Inspect Generated Artifacts
+    needs: build-and-attest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-subjects
+          path: dist/
+
+      - name: Inspect artifacts
+        run: |
+          echo "## Generated Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          ls -la dist/ >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          
+          echo "## Checksums" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          cat dist/subject.checksums.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show attestation info
+        run: |
+          echo "## Attestation Information" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Attestations were generated for the build subjects." >> "$GITHUB_STEP_SUMMARY"
+          echo "To view attestations, go to: https://github.com/${{ github.repository }}/attestations" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Verification Commands (for local testing):" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`bash" >> "$GITHUB_STEP_SUMMARY"
+          echo "# After downloading artifacts:" >> "$GITHUB_STEP_SUMMARY"
+          echo "gh attestation verify dist/*.crate -R ${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload attestations as artifacts
+        if: inputs.upload_attestations
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: attestations-bundle
+          path: |
+            dist/*.crate
+            dist/subject.checksums.txt
+            dist/wibble-client-core.spdx.json
+          retention-days: 5

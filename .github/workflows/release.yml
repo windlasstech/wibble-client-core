@@ -1,0 +1,139 @@
+name: release
+#
+# SLSA Level 3 Release Pipeline
+#
+# This workflow orchestrates the SLSA Level 3 compliant release process.
+# It is the ONLY entry point for creating verified releases.
+#
+# Triggers:
+#   - Push of version tags (v*)
+#   - Manual workflow dispatch
+#
+# Reference: docs/architecture/slsa-level-3-release.md
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: 'Create as draft release'
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Preflight Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Verify tag is on main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "ERROR: Tag is not on main branch"
+            exit 1
+          fi
+          echo "Tag is verified to be on main branch"
+
+      - name: Get version from Cargo.toml
+        id: get-version
+        run: |
+          version=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Workspace version: ${version}"
+
+      - name: Verify tag matches version
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          cargo_version="${{ steps.get-version.outputs.version }}"
+          if [ "${tag_version}" != "${cargo_version}" ]; then
+            echo "ERROR: Tag version (${tag_version}) does not match Cargo.toml version (${cargo_version})"
+            exit 1
+          fi
+          echo "Version match confirmed: ${cargo_version}"
+
+  build:
+    name: Build Release Subjects
+    needs: guard
+    uses: ./.github/workflows/reusable-rust-release-build.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+  provenance:
+    name: Generate SLSA Provenance
+    needs: build
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    # SLSA generator MUST be referenced by semver tag (not SHA) for verification compatibility
+    # This is the approved exception to the repository's SHA-pin policy per ADR-0003
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.base64-subjects }}"
+      upload-assets: true
+      provenance-name: wibble-client-core.intoto.jsonl
+
+  publish:
+    name: Publish Release
+    needs: [build, provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Download artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-subjects
+          path: dist/
+
+      - name: Prepare release assets
+        run: |
+          cd dist/
+          # Create comprehensive checksums file
+          sha256sum *.crate > ../sha256SUMS
+          cp ../sha256SUMS .
+          ls -la
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
+        with:
+          name: "Release ${{ github.ref_name }}"
+          draft: ${{ inputs.draft || false }}
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          generate_release_notes: true
+          files: |
+            dist/*.crate
+            dist/subject.checksums.txt
+            dist/sha256SUMS
+            dist/wibble-client-core.spdx.json
