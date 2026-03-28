@@ -47,9 +47,7 @@ updates:
     # Limit concurrent PRs to avoid overwhelming review queue
     open-pull-requests-limit: 5
     
-    # Conservative versioning for security-critical codebase
-    # Only increase versions when necessary (respects Cargo.lock)
-    versioning-strategy: "increase-if-necessary"
+    versioning-strategy: "auto"
     
     # Group related dependencies to reduce PR noise
     groups:
